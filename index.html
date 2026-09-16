@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban Board Familiar</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-100 font-sans min-h-screen flex flex-col">
+
+    <!-- Tela de Login / Autenticação Simples -->
+    <div id="authScreen" class="fixed inset-0 bg-slate-900 flex justify-center items-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
+            <h2 id="authTitle" class="text-2xl font-bold text-slate-800 mb-6 text-center">🏡 Kanban Familiar</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">E-mail</label>
+                    <input type="email5" id="authEmail" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="seu@email.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
+                    <input type="password" id="authPassword" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="••••••••">
+                </div>
+                <button onclick="handleAuth()" id="authButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition">Entrar</button>
+                <p class="text-center text-sm text-slate-600 mt-4">
+                    <span id="authToggleText">Não tem uma conta?</span> 
+                    <button onclick="toggleAuthMode()" id="authToggleBtn" class="text-blue-600 font-semibold hover:underline">Cadastre-se</button>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seletor de Quadros (Até 3 por usuário) -->
+    <div id="boardScreen" class="hidden flex-1 flex flex-col items-center justify-center p-6">
+        <div class="bg-white rounded-2xl p-8 w-full max-w-lg shadow-xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-slate-800">Meus Quadros (Máx. 3)</h2>
+                <button onclick="logout()" class="text-sm text-red-600 hover:underline font-medium">Sair</button>
+            </div>
+            <div id="boardsList" class="space-y-3 mb-6">
+                <!-- Preenchido via JS -->
+            </div>
+            <div id="newBoardContainer" class="flex gap-2">
+                <input type="text" id="newBoardTitle" placeholder="Nome do novo quadro..." class="flex-1 border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button onclick="criarQuadro()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition">+ Criar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aplicação Principal do Kanban -->
+    <div id="kanbanApp" class="hidden flex-1 flex flex-col">
+        <!-- Cabeçalho -->
+        <header class="bg-white shadow-sm py-4 px-6 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <button onclick="voltarParaQuadros()" class="text-slate-500 hover:text-slate-800 text-sm font-semibold">← Voltar</button>
+                <h1 id="currentBoardTitle" class="text-xl font-bold text-slate-800">🏡 Kanban Board</h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="abrirModalCompartilhar()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition">🔗 Compartilhar</button>
+                <button onclick="abrirModalNovaTarefa()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow transition">+ Nova Tarefa</button>
+            </div>
+        </header>
+
+        <!-- Kanban Container -->
+        <main class="flex-1 p-6 flex gap-6 overflow-x-auto">
+            <!-- Coluna A Fazer -->
+            <section class="flex-1 min-w-[300px] bg-slate-200/60 rounded-2xl p-4 flex flex-col h-[calc(100vh-140px)]">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="font-bold text-slate-700">A Fazer</h2>
+                    <span id="count-todo" class="bg-slate-300 text-slate-700 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                </div>
+                <div id="list-todo" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+            </section>
+
+            <!-- Coluna Fazendo -->
+            <section class="flex-1 min-w-[300px] bg-amber-50 rounded-2xl p-4 flex flex-col h-[calc(100vh-140px)] border border-amber-200">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="font-bold text-amber-800">Fazendo</h2>
+                    <span id="count-doing" class="bg-amber-200 text-amber-800 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                </div>
+                <div id="list-doing" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+            </section>
+
+            <!-- Coluna Feito -->
+            <section class="flex-1 min-w-[300px] bg-emerald-50 rounded-2xl p-4 flex flex-col h-[calc(100vh-140px)] border border-emerald-200">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="font-bold text-emerald-800">Feito</h2>
+                    <span id="count-done" class="bg-emerald-200 text-emerald-800 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                </div>
+                <div id="list-done" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal de Tarefa -->
+    <div id="taskModal" class="fixed inset-0 bg-black/50 hidden flex justify-center items-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modalTitle" class="text-lg font-bold text-slate-800">Nova Tarefa</h3>
+                <button onclick="fecharModal()" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+            </div>
+            <input type="hidden" id="taskId">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">O que precisa ser feito?</label>
+                <input type="text" id="taskTitleInput" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: Comprar mantimentos">
+            </div>
+            <div class="mb-4" id="statusContainer">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Fase / Coluna</label>
+                <select id="taskStatusSelect" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="todo">A Fazer</option>
+                    <option value="doing">Fazendo</option>
+                    <option value="done">Feito</option>
+                </select>
+            </div>
+            <div class="mb-4 flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
+                <div>
+                    <span class="block text-sm font-medium text-slate-700">Está bloqueada?</span>
+                </div>
+                <input type="checkbox" id="taskBlockedCheckbox" onchange="toggleBlockOptions()" class="w-5 h-5 text-blue-600 rounded">
+            </div>
+            <div id="blockOptionsContainer" class="mb-4 hidden">
+                <div id="blockChipsContainer" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div class="flex justify-between items-center mt-6">
+                <button id="btnExcluir" onclick="excluirTarefaAtual()" class="text-red-600 hover:text-red-800 text-sm font-medium hidden">Excluir</button>
+                <div class="flex gap-2 ml-auto">
+                    <button onclick="fecharModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50">Cancelar</button>
+                    <button onclick="salvarTarefa()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Compartilhar -->
+    <div id="shareModal" class="fixed inset-0 bg-black/50 hidden flex justify-center items-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-800">Compartilhar Quadro</h3>
+                <button onclick="fecharModalCompartilhar()" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">E-mail do usuário</label>
+                <input type="email" id="shareEmailInput" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="familiar@email.com">
+            </div>
+            <button onclick="compartilharQuadro()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium">Convidar</button>
+        </div>
+    </div>
+
+    <!-- Script de Integração com Supabase -->
+    <script>
+        // Substitua pelas suas chaves públicas do Supabase
+        const SUPABASE_URL = 'https://sinimodotjcavgjhtate.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_blWoUCYdXRmO3MW6MxX0bA_O_EGz45m';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let isSignUp = false;
+        let currentUser = null;
+        let currentBoardId = null;
+        let currentBoardName = '';
+        let selectedBlockReason = 'money';
+
+        const blockInfo = {
+            'money': { label: 'Falta grana', color: 'bg-red-50 text-red-700 border-red-300' },
+            'material': { label: 'Falta material', color: 'bg-orange-50 text-orange-700 border-orange-300' },
+            'knowledge': { label: 'Não sei fazer', color: 'bg-purple-50 text-purple-700 border-purple-300' },
+            'time': { label: 'Falta tempo', color: 'bg-blue-50 text-blue-700 border-blue-300' }
+        };
+
+        let tasks = [];
+
+        // --- Autenticação ---
+        function toggleAuthMode() {
+            isSignUp = !isSignUp;
+            document.getElementById('authTitle').innerText = isSignUp ? 'Criar Nova Conta' : '🏡 Kanban Familiar';
+            document.getElementById('authButton').innerText = isSignUp ? 'Cadastrar' : 'Entrar';
+            document.getElementById('authToggleText').innerText = isSignUp ? 'Já tem uma conta?' : 'Não tem uma conta?';
+            document.getElementById('authToggleBtn').innerText = isSignUp ? 'Entrar' : 'Cadastre-se';
+        }
+
+        async function handleAuth() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            if (!email || !password) return alert('Preencha e-mail e senha.');
+
+            if (isSignUp) {
+                const { data, error } = await supabaseClient.auth.signUp({ email, password });
+                if (error) return alert(error.message);
+                alert('Conta criada com sucesso! Faça login.');
+                toggleAuthMode();
+            } else {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                if (error) return alert(error.message);
+                currentUser = data.user;
+                verificarSessao();
+            }
+        }
+
+        async function logout() {
+            await supabaseClient.auth.signOut();
+            currentUser = null;
+            document.getElementById('authScreen').classList.remove('hidden');
+            document.getElementById('boardScreen').classList.add('hidden');
+            document.getElementById('kanbanApp').classList.add('hidden');
+        }
+
+        async function verificarSessao() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                document.getElementById('authScreen').classList.add('hidden');
+                carregarQuadros();
+            }
+        }
+
+        // --- Gerenciamento de Quadros (Limite de 3) ---
+        async function carregarQuadros() {
+            document.getElementById('boardScreen').classList.remove('hidden');
+            document.getElementById('kanbanApp').classList.add('hidden');
+
+            // Busca quadros criados pelo usuário ou compartilhados com ele
+            const { data: owned } = await supabaseClient.from('boards').select('*').eq('owner_id', currentUser.id);
+            const { data: shared } = await supabaseClient.from('board_members').select('boards(*)').eq('user_id', currentUser.id);
+            
+            let sharedBoards = shared ? shared.map(s => s.boards) : [];
+            let allBoards = [...owned, ...sharedBoards];
+
+            // Remove duplicadas caso o dono também esteja na tabela de membros
+            allBoards = Array.from(new Set(allBoards.map(b => b.id)))
+                             .map(id => allBoards.find(b => b.id === id));
+
+            const container = document.getElementById('boardsList');
+            container.innerHTML = '';
+
+            allBoards.forEach(board => {
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center p-4 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition cursor-pointer";
+                div.innerHTML = `<span class="font-semibold text-slate-800">${board.title}</span> <span class="text-blue-600 text-sm font-medium">Abrir →</span>`;
+                div.onclick = () => abrirQuadro(board.id, board.title);
+                container.appendChild(div);
+            });
+
+            // Controla se atingiu o limite de 3 quadros próprios
+            if (owned.length >= 3) {
+                document.getElementById('newBoardContainer').classList.add('hidden');
+            } else {
+                document.getElementById('newBoardContainer').classList.remove('hidden');
+            }
+        }
+
+        async function criarQuadro() {
+            const title = document.getElementById('newBoardTitle').value.trim();
+            if (!title) return;
+
+            const { count } = await supabaseClient.from('boards').select('*', { count: 'exact', head: true }).eq('owner_id', currentUser.id);
+            if (count >= 3) return alert('Você atingiu o limite máximo de 3 quadros para este plano MVP.');
+
+            const { error } = await supabaseClient.from('boards').insert([{ title, owner_id: currentUser.id }]);
+            if (error) return alert(error.message);
+
+            document.getElementById('newBoardTitle').value = '';
+            carregarQuadros();
+        }
+
+        function abrirQuadro(id, title) {
+            currentBoardId = id;
+            currentBoardName = title;
+            document.getElementById('currentBoardTitle').innerText = `🏡 ${title}`;
+            document.getElementById('boardScreen').classList.add('hidden');
+            document.getElementById('kanbanApp').classList.remove('hidden');
+            carregarTarefas();
+        }
+
+        function voltarParaQuadros() {
+            carregarQuadros();
+        }
+
+        // --- Tarefas e Kanban ---
+        async function carregarTarefas() {
+            const { data, error } = await supabaseClient.from('tasks').select('*').eq('board_id', currentBoardId);
+            if (error) return console.error(error);
+            tasks = data || [];
+            render();
+        }
+
+        function render() {
+            ['todo', 'doing', 'done'].forEach(status => {
+                const container = document.getElementById(`list-${status}`);
+                const countBadge = document.getElementById(`count-${status}`);
+                const filtered = tasks.filter(t => t.status === status);
+
+                countBadge.innerText = filtered.length;
+                container.innerHTML = '';
+
+                filtered.forEach(task => {
+                    let blockHtml = '';
+                    if (task.is_blocked && task.block_reason && blockInfo[task.block_reason]) {
+                        const b = blockInfo[task.block_reason];
+                        blockHtml = `<div class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${b.color}"><span>🔒</span> ${b.label}</div>`;
+                    }
+
+                    const card = document.createElement('div');
+                    card.className = "bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition cursor-pointer flex flex-col justify-between";
+                    card.onclick = () => abrirModalEditarTarefa(task.id);
+                    card.innerHTML = `<div class="flex justify-between items-start"><span class="font-semibold text-slate-800 text-sm">${task.title}</span><span class="text-slate-400 text-xs">✏️</span></div>${blockHtml}`;
+                    container.appendChild(card);
+                });
+            });
+            renderizarChipsBloqueio();
+        }
+
+        function renderizarChipsBloqueio() {
+            const container = document.getElementById('blockChipsContainer');
+            container.innerHTML = '';
+            for (let key in blockInfo) {
+                const b = blockInfo[key];
+                const isSelected = selectedBlockReason === key;
+                const chip = document.createElement('button');
+                chip.type = 'button';
+                chip.className = `px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${isSelected ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100'}`;
+                chip.innerText = b.label;
+                chip.onclick = (e) => { e.stopPropagation(); selectedBlockReason = key; renderizarChipsBloqueio(); };
+                container.appendChild(chip);
+            }
+        }
+
+        function abrirModalNovaTarefa() {
+            document.getElementById('modalTitle').innerText = "Nova Tarefa";
+            document.getElementById('taskId').value = '';
+            document.getElementById('taskTitleInput').value = '';
+            document.getElementById('taskBlockedCheckbox').checked = false;
+            document.getElementById('statusContainer').style.display = 'none';
+            document.getElementById('btnExcluir').style.display = 'none';
+            selectedBlockReason = Object.keys(blockInfo)[0];
+            toggleBlockOptions();
+            document.getElementById('taskModal').classList.remove('hidden');
+        }
+
+        function abrirModalEditarTarefa(id) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+            document.getElementById('modalTitle').innerText = "Editar Tarefa";
+            document.getElementById('taskId').value = task.id;
+            document.getElementById('taskTitleInput').value = task.title;
+            document.getElementById('taskStatusSelect').value = task.status;
+            document.getElementById('taskBlockedCheckbox').checked = task.is_blocked;
+            selectedBlockReason = task.block_reason || Object.keys(blockInfo)[0];
+            document.getElementById('statusContainer').style.display = 'block';
+            document.getElementById('btnExcluir').style.display = 'inline-block';
+            toggleBlockOptions();
+            document.getElementById('taskModal').classList.remove('hidden');
+        }
+
+        function fecharModal() { document.getElementById('taskModal').classList.add('hidden'); }
+        function toggleBlockOptions() {
+            const isChecked = document.getElementById('taskBlockedCheckbox').checked;
+            document.getElementById('blockOptionsContainer').classList.toggle('hidden', !isChecked);
+        }
+
+        async function salvarTarefa() {
+            const id = document.getElementById('taskId').value;
+            const title = document.getElementById('taskTitleInput').value.trim();
+            const is_blocked = document.getElementById('taskBlockedCheckbox').checked;
+            const status = id ? document.getElementById('taskStatusSelect').value : 'todo';
+            const block_reason = is_blocked ? selectedBlockReason : null;
+
+            if (!title) return;
+
+            if (id) {
+                await supabaseClient.from('tasks').update({ title, status, is_blocked, block_reason }).eq('id', id);
+            } else {
+                await supabaseClient.from('tasks').insert([{ board_id: currentBoardId, title, status: 'todo', is_blocked, block_reason }]);
+            }
+
+            fecharModal();
+            carregarTarefas();
+        }
+
+        async function excluirTarefaAtual() {
+            const id = document.getElementById('taskId').value;
+            if (id) {
+                await supabaseClient.from('tasks').delete().eq('id', id);
+                fecharModal();
+                carregarTarefas();
+            }
+        }
+
+        // --- Compartilhamento ---
+        function abrirModalCompartilhar() { document.getElementById('shareModal').classList.remove('hidden'); }
+        function fecharModalCompartilhar() { document.getElementById('shareModal').classList.add('hidden'); }
+
+        async function compartilharQuadro() {
+            const email = document.getElementById('shareEmailInput').value.trim();
+            if (!email) return;
+
+            // Busca o ID do usuário pelo email na tabela auth ou users (assumindo tabela pública de mapeamento ou busca direta)
+            const { data: userData, error: userError } = await supabaseClient.from('users').select('id').eq('email', email).single();
+            if (userError || !userData) return alert('Usuário não encontrado na plataforma.');
+
+            const { error } = await supabaseClient.from('board_members').insert([{ board_id: currentBoardId, user_id: userData.id }]);
+            if (error) return alert('Erro ao compartilhar ou usuário já adicionado.');
+
+            alert('Quadro compartilhado com sucesso!');
+            document.getElementById('shareEmailInput').value = '';
+            fecharModalCompartilhar();
+        }
+
+        // Inicialização
+        verificarSessao();
+    </script>
+</body>
+</html>
