@@ -217,52 +217,102 @@
 
         // --- Gerenciamento de Quadros (Limite de 3) ---
         async function carregarQuadros() {
-            document.getElementById('boardScreen').classList.remove('hidden');
-            document.getElementById('kanbanApp').classList.add('hidden');
+    document.getElementById('boardScreen').classList.remove('hidden');
+    document.getElementById('kanbanApp').classList.add('hidden');
 
-            // Busca quadros criados pelo usuário ou compartilhados com ele
-            const { data: owned } = await supabaseClient.from('boards').select('*').eq('owner_id', currentUser.id);
-            const { data: shared } = await supabaseClient.from('board_members').select('boards(*)').eq('user_id', currentUser.id);
-            
-            let sharedBoards = shared ? shared.map(s => s.boards) : [];
-            let allBoards = [...owned, ...sharedBoards];
+    if (!currentUser) return;
 
-            // Remove duplicadas caso o dono também esteja na tabela de membros
-            allBoards = Array.from(new Set(allBoards.map(b => b.id)))
-                             .map(id => allBoards.find(b => b.id === id));
+    // Busca quadros criados pelo usuário
+    const { data: owned, error: errOwned } = await supabaseClient
+        .from('boards')
+        .select('*')
+        .eq('owner_id', currentUser.id);
 
-            const container = document.getElementById('boardsList');
-            container.innerHTML = '';
+    if (errOwned) {
+        console.error('Erro ao buscar quadros próprios:', errOwned);
+    }
 
-            allBoards.forEach(board => {
-                const div = document.createElement('div');
-                div.className = "flex justify-between items-center p-4 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition cursor-pointer";
-                div.innerHTML = `<span class="font-semibold text-slate-800">${board.title}</span> <span class="text-blue-600 text-sm font-medium">Abrir →</span>`;
-                div.onclick = () => abrirQuadro(board.id, board.title);
-                container.appendChild(div);
-            });
+    // Busca quadros compartilhados com o usuário
+    const { data: shared, error: errShared } = await supabaseClient
+        .from('board_members')
+        .select('boards(*)')
+        .eq('user_id', currentUser.id);
 
-            // Controla se atingiu o limite de 3 quadros próprios
-            if (owned.length >= 3) {
-                document.getElementById('newBoardContainer').classList.add('hidden');
-            } else {
-                document.getElementById('newBoardContainer').classList.remove('hidden');
-            }
-        }
+    if (errShared) {
+        console.error('Erro ao buscar quadros compartilhados:', errShared);
+    }
+    
+    let sharedBoards = shared ? shared.map(s => s.boards).filter(b => b !== null) : [];
+    let ownedBoards = owned || [];
+    let allBoards = [...ownedBoards, ...sharedBoards];
 
-        async function criarQuadro() {
-            const title = document.getElementById('newBoardTitle').value.trim();
-            if (!title) return;
+    // Remove duplicadas
+    allBoards = Array.from(new Set(allBoards.map(b => b.id)))
+                     .map(id => allBoards.find(b => b.id === id));
 
-            const { count } = await supabaseClient.from('boards').select('*', { count: 'exact', head: true }).eq('owner_id', currentUser.id);
-            if (count >= 3) return alert('Você atingiu o limite máximo de 3 quadros para este plano MVP.');
+    const container = document.getElementById('boardsList');
+    container.innerHTML = '';
 
-            const { error } = await supabaseClient.from('boards').insert([{ title, owner_id: currentUser.id }]);
-            if (error) return alert(error.message);
+    if (allBoards.length === 0) {
+        container.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">Nenhum quadro encontrado. Crie o seu primeiro abaixo!</p>';
+    } else {
+        allBoards.forEach(board => {
+            const div = document.createElement('div');
+            div.className = "flex justify-between items-center p-4 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition cursor-pointer";
+            div.innerHTML = `<span class="font-semibold text-slate-800">${board.title}</span> <span class="text-blue-600 text-sm font-medium">Abrir →</span>`;
+            div.onclick = () => abrirQuadro(board.id, board.title);
+            container.appendChild(div);
+        });
+    }
 
-            document.getElementById('newBoardTitle').value = '';
-            carregarQuadros();
-        }
+    // Controla limite de 3 quadros próprios
+    if (ownedBoards.length >= 3) {
+        document.getElementById('newBoardContainer').classList.add('hidden');
+    } else {
+        document.getElementById('newBoardContainer').classList.remove('hidden');
+    }
+}
+
+async function criarQuadro() {
+    const titleInput = document.getElementById('newBoardTitle');
+    const title = titleInput.value.trim();
+    if (!title) return;
+
+    if (!currentUser) {
+        alert('Usuário não autenticado. Faça login novamente.');
+        return;
+    }
+
+    // Verifica quantos quadros próprios o usuário já possui
+    const { count, error: countError } = await supabaseClient
+        .from('boards')
+        .select('*', { count: 'exact', head: true })
+        .eq('owner_id', currentUser.id);
+
+    if (countError) {
+        console.error('Erro ao contar quadros:', countError);
+    }
+
+    if (count >= 3) {
+        alert('Você atingiu o limite máximo de 3 quadros para este plano MVP.');
+        return;
+    }
+
+    // Insere explicitamente passando o owner_id do usuário logado
+    const { error } = await supabaseClient
+        .from('boards')
+        .insert([{ title: title, owner_id: currentUser.id }]);
+
+    if (error) {
+        alert('Erro ao criar quadro: ' + error.message);
+        return;
+    }
+
+    titleInput.value = '';
+    
+    // Atualiza a tela imediatamente após criar
+    await carregarQuadros();
+}
 
         function abrirQuadro(id, title) {
             currentBoardId = id;
