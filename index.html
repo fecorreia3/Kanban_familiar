@@ -11,14 +11,16 @@
 </head>
 <body class="bg-slate-100 font-sans min-h-screen flex flex-col">
 
-    <!-- Tela de Login / Autenticação Simples -->
-    <div id="authScreen" class="fixed inset-0 bg-slate-900 flex justify-center items-center p-4 z-50">
+    <!-- ========================================== -->
+    <!-- TELA 1: LOGIN / AUTENTICAÇÃO               -->
+    <!-- ========================================== -->
+    <div id="screenLogin" class="fixed inset-0 bg-slate-900 flex justify-center items-center p-4 z-50">
         <div class="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
             <h2 id="authTitle" class="text-2xl font-bold text-slate-800 mb-6 text-center">🏡 Kanban Familiar</h2>
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">E-mail</label>
-                    <input type="email5" id="authEmail" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="seu@email.com">
+                    <input type="email" id="authEmail" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="seu@email.com">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
@@ -33,38 +35,80 @@
         </div>
     </div>
 
-    <!-- Seletor de Quadros (Até 3 por usuário) -->
-    <div id="boardScreen" class="hidden flex-1 flex flex-col items-center justify-center p-6">
-        <div class="bg-white rounded-2xl p-8 w-full max-w-lg shadow-xl">
+    <!-- ========================================== -->
+    <!-- TELA 2: LISTAGEM DE BOARDS / VAZIA         -->
+    <!-- ========================================== -->
+    <div id="screenBoards" class="hidden flex-1 flex flex-col p-6 max-w-4xl mx-auto w-full">
+        <header class="flex justify-between items-center mb-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800">Meus Quadros Kanban</h1>
+                <p class="text-sm text-slate-500">Gerencie seus quadros familiares (Máx. 3)</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="abrirTelaCriarQuadro()" id="btnNovoQuadroHeader" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium shadow transition flex items-center gap-2">
+                    <span>+</span> Novo Quadro
+                </button>
+                <button onclick="logout()" class="text-sm text-red-600 hover:bg-red-50 px-3 py-2 rounded-xl font-medium transition border border-red-200">Sair</button>
+            </div>
+        </header>
+
+        <!-- Container da Lista ou Estado Vazio -->
+        <main class="flex-1">
+            <!-- Estado Vazio (Caso não tenha nenhum quadro) -->
+            <div id="emptyState" class="hidden flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl border border-dashed border-slate-300 text-center">
+                <div class="text-4xl mb-3">📭</div>
+                <h3 class="text-lg font-bold text-slate-700 mb-1">Nenhum quadro encontrado</h3>
+                <p class="text-sm text-slate-500 max-w-sm mb-6">Você ainda não criou nenhum quadro Kanban. Crie o seu primeiro agora mesmo para começar a organizar as tarefas!</p>
+                <button onclick="abrirTelaCriarQuadro()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium shadow transition">
+                    Criar Primeiro Quadro
+                </button>
+            </div>
+
+            <!-- Grid de Quadros Existentes -->
+            <div id="boardsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Preenchido via JavaScript -->
+            </div>
+        </main>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TELA 3: CRIAR NOVO BOARD                   -->
+    <!-- ========================================== -->
+    <div id="screenCreateBoard" class="hidden fixed inset-0 bg-black/50 flex justify-center items-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-slate-800">Meus Quadros (Máx. 3)</h2>
-                <button onclick="logout()" class="text-sm text-red-600 hover:underline font-medium">Sair</button>
+                <h2 class="text-xl font-bold text-slate-800">Criar Novo Quadro</h2>
+                <button onclick="fecharTelaCriarQuadro()" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
             </div>
-            <div id="boardsList" class="space-y-3 mb-6">
-                <!-- Preenchido via JS -->
-            </div>
-            <div id="newBoardContainer" class="flex gap-2">
-                <input type="text" id="newBoardTitle" placeholder="Nome do novo quadro..." class="flex-1 border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <button onclick="criarQuadro()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition">+ Criar</button>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Nome do Quadro</label>
+                    <input type="text" id="newBoardTitleInput" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: Organização da Casa">
+                </div>
+                <div class="flex gap-3 justify-end mt-6">
+                    <button onclick="fecharTelaCriarQuadro()" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 font-medium">Cancelar</button>
+                    <button onclick="salvarNovoQuadro()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium shadow transition">Criar Quadro</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Aplicação Principal do Kanban -->
-    <div id="kanbanApp" class="hidden flex-1 flex flex-col">
-        <!-- Cabeçalho -->
+    <!-- ========================================== -->
+    <!-- TELA 4: APLICAÇÃO KANBAN (DENTRO DO QUADRO)-->
+    <!-- ========================================== -->
+    <div id="screenKanban" class="hidden flex-1 flex flex-col">
         <header class="bg-white shadow-sm py-4 px-6 flex justify-between items-center">
             <div class="flex items-center gap-4">
-                <button onclick="voltarParaQuadros()" class="text-slate-500 hover:text-slate-800 text-sm font-semibold">← Voltar</button>
+                <button onclick="voltarParaBoards()" class="text-slate-500 hover:text-slate-800 text-sm font-semibold flex items-center gap-1">← Meus Quadros</button>
+                <span class="text-slate-300">|</span>
                 <h1 id="currentBoardTitle" class="text-xl font-bold text-slate-800">🏡 Kanban Board</h1>
             </div>
             <div class="flex items-center gap-3">
-                <button onclick="abrirModalCompartilhar()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition">🔗 Compartilhar</button>
+                <button onclick="abrirModalCompartilhar()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition border border-slate-200">🔗 Compartilhar</button>
                 <button onclick="abrirModalNovaTarefa()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow transition">+ Nova Tarefa</button>
             </div>
         </header>
 
-        <!-- Kanban Container -->
         <main class="flex-1 p-6 flex gap-6 overflow-x-auto">
             <!-- Coluna A Fazer -->
             <section class="flex-1 min-w-[300px] bg-slate-200/60 rounded-2xl p-4 flex flex-col h-[calc(100vh-140px)]">
@@ -95,12 +139,12 @@
         </main>
     </div>
 
-    <!-- Modal de Tarefa -->
+    <!-- Modal de Tarefa (Criar / Editar) -->
     <div id="taskModal" class="fixed inset-0 bg-black/50 hidden flex justify-center items-center p-4 z-50">
         <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="modalTitle" class="text-lg font-bold text-slate-800">Nova Tarefa</h3>
-                <button onclick="fecharModal()" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+                <button onclick="fecharModalTarefa()" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
             </div>
             <input type="hidden" id="taskId">
             <div class="mb-4">
@@ -127,14 +171,14 @@
             <div class="flex justify-between items-center mt-6">
                 <button id="btnExcluir" onclick="excluirTarefaAtual()" class="text-red-600 hover:text-red-800 text-sm font-medium hidden">Excluir</button>
                 <div class="flex gap-2 ml-auto">
-                    <button onclick="fecharModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50">Cancelar</button>
+                    <button onclick="fecharModalTarefa()" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50">Cancelar</button>
                     <button onclick="salvarTarefa()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">Salvar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal Compartilhar -->
+    <!-- Modal Compartilhar Quadro -->
     <div id="shareModal" class="fixed inset-0 bg-black/50 hidden flex justify-center items-center p-4 z-50">
         <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
             <div class="flex justify-between items-center mb-4">
@@ -142,16 +186,17 @@
                 <button onclick="fecharModalCompartilhar()" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
             </div>
             <div class="mb-4">
-                <label class="block text-sm font-medium text-slate-700 mb-1">E-mail do usuário</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">E-mail do familiar</label>
                 <input type="email" id="shareEmailInput" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="familiar@email.com">
             </div>
             <button onclick="compartilharQuadro()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium">Convidar</button>
         </div>
     </div>
 
-    <!-- Script de Integração com Supabase -->
+    <!-- ========================================== -->
+    <!-- SCRIPT DE CONTROLE DE TELAS E SUPABASE     -->
+    <!-- ========================================== -->
     <script>
-        // Substitua pelas suas chaves públicas do Supabase
         const SUPABASE_URL = 'https://sinimodotjcavgjhtate.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_blWoUCYdXRmO3MW6MxX0bA_O_EGz45m';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -171,7 +216,15 @@
 
         let tasks = [];
 
-        // --- Autenticação ---
+        // Controle de alternância de telas
+        function mostrarTela(idTela) {
+            ['screenLogin', 'screenBoards', 'screenKanban'].forEach(t => {
+                document.getElementById(t).classList.add('hidden');
+            });
+            document.getElementById(idTela).classList.remove('hidden');
+        }
+
+        // --- AUTENTICAÇÃO ---
         function toggleAuthMode() {
             isSignUp = !isSignUp;
             document.getElementById('authTitle').innerText = isSignUp ? 'Criar Nova Conta' : '🏡 Kanban Familiar';
@@ -181,12 +234,12 @@
         }
 
         async function handleAuth() {
-            const email = document.getElementById('authEmail').value;
-            const password = document.getElementById('authPassword').value;
+            const email = document.getElementById('authEmail').value.trim();
+            const password = document.getElementById('authPassword').value.trim();
             if (!email || !password) return alert('Preencha e-mail e senha.');
 
             if (isSignUp) {
-                const { data, error } = await supabaseClient.auth.signUp({ email, password });
+                const { error } = await supabaseClient.auth.signUp({ email, password });
                 if (error) return alert(error.message);
                 alert('Conta criada com sucesso! Faça login.');
                 toggleAuthMode();
@@ -194,148 +247,123 @@
                 const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
                 if (error) return alert(error.message);
                 currentUser = data.user;
-                verificarSessao();
+                carregarQuadros();
             }
         }
 
         async function logout() {
             await supabaseClient.auth.signOut();
             currentUser = null;
-            document.getElementById('authScreen').classList.remove('hidden');
-            document.getElementById('boardScreen').classList.add('hidden');
-            document.getElementById('kanbanApp').classList.add('hidden');
+            document.getElementById('authEmail').value = '';
+            document.getElementById('authPassword').value = '';
+            mostrarTela('screenLogin');
         }
 
-        async function verificarSessao() {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (session) {
-                currentUser = session.user;
-                document.getElementById('authScreen').classList.add('hidden');
-                carregarQuadros();
+        // --- GERENCIAMENTO DE BOARDS ---
+        async function carregarQuadros() {
+            mostrarTela('screenBoards');
+
+            // Busca boards próprios e compartilhados
+            const { data: owned } = await supabaseClient.from('boards').select('*').eq('owner_id', currentUser.id);
+            const { data: shared } = await supabaseClient.from('board_members').select('boards(*)').eq('user_id', currentUser.id);
+
+            let sharedBoards = shared ? shared.map(s => s.boards).filter(b => b !== null) : [];
+            let ownedBoards = owned || [];
+            let allBoards = [...ownedBoards, ...sharedBoards];
+
+            // Remove duplicatas
+            allBoards = Array.from(new Set(allBoards.map(b => b.id)))
+                             .map(id => allBoards.find(b => b.id === id));
+
+            const grid = document.getElementById('boardsGrid');
+            const emptyState = document.getElementById('emptyState');
+            grid.innerHTML = '';
+
+            if (allBoards.length === 0) {
+                emptyState.classList.remove('hidden');
+                grid.classList.add('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                grid.classList.remove('hidden');
+
+                allBoards.forEach(board => {
+                    const card = document.createElement('div');
+                    card.className = "bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition cursor-pointer flex flex-col justify-between h-36";
+                    card.innerHTML = `
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-lg mb-1 truncate">${board.title}</h3>
+                            <span class="text-xs text-slate-400">${board.owner_id === currentUser.id ? 'Meu Quadro' : 'Compartilhado com você'}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-blue-600 font-semibold text-sm">
+                            <span>Abrir Quadro</span>
+                            <span>→</span>
+                        </div>
+                    `;
+                    card.onclick = () => abrirQuadro(board.id, board.title);
+                    grid.appendChild(card);
+                });
+            }
+
+            // Trava o botão de novo quadro se atingir o limite de 3 próprios
+            const btnNovo = document.getElementById('btnNovoQuadroHeader');
+            if (ownedBoards.length >= 3) {
+                btnNovo.classList.add('opacity-50', 'cursor-not-allowed');
+                btnNovo.title = "Limite de 3 quadros próprios atingido.";
+            } else {
+                btnNovo.classList.remove('opacity-50', 'cursor-not-allowed');
+                btnNovo.title = "";
             }
         }
 
-        // --- Gerenciamento de Quadros (Limite de 3) ---
-        async function carregarQuadros() {
-    document.getElementById('boardScreen').classList.remove('hidden');
-    document.getElementById('kanbanApp').classList.add('hidden');
+        // --- TELA 3: MODAL DE CRIAR QUADRO ---
+        function abrirTelaCriarQuadro() {
+            // Valida limite de 3 antes de abrir a tela de criação
+            supabaseClient.from('boards').select('*', { count: 'exact', head: true }).eq('owner_id', currentUser.id).then(({ count }) => {
+                if (count >= 3) {
+                    alert('Você já atingiu o limite máximo de 3 quadros próprios para este MVP.');
+                    return;
+                }
+                document.getElementById('newBoardTitleInput').value = '';
+                document.getElementById('screenCreateBoard').classList.remove('hidden');
+            });
+        }
 
-    if (!currentUser) return;
+        function fecharTelaCriarQuadro() {
+            document.getElementById('screenCreateBoard').classList.add('hidden');
+        }
 
-    // Busca quadros criados pelo usuário
-    const { data: owned, error: errOwned } = await supabaseClient
-        .from('boards')
-        .select('*')
-        .eq('owner_id', currentUser.id);
+        async function salvarNovoQuadro() {
+            const title = document.getElementById('newBoardTitleInput').value.trim();
+            if (!title) return alert('Digite um nome para o quadro.');
 
-    if (errOwned) {
-        console.error('Erro ao buscar quadros próprios:', errOwned);
-    }
+            const { error } = await supabaseClient.from('boards').insert([{ title, owner_id: currentUser.id }]);
+            if (error) return alert('Erro ao criar quadro: ' + error.message);
 
-    // Busca quadros compartilhados com o usuário
-    const { data: shared, error: errShared } = await supabaseClient
-        .from('board_members')
-        .select('boards(*)')
-        .eq('user_id', currentUser.id);
+            fecharTelaCriarQuadro();
+            carregarQuadros();
+        }
 
-    if (errShared) {
-        console.error('Erro ao buscar quadros compartilhados:', errShared);
-    }
-    
-    let sharedBoards = shared ? shared.map(s => s.boards).filter(b => b !== null) : [];
-    let ownedBoards = owned || [];
-    let allBoards = [...ownedBoards, ...sharedBoards];
-
-    // Remove duplicadas
-    allBoards = Array.from(new Set(allBoards.map(b => b.id)))
-                     .map(id => allBoards.find(b => b.id === id));
-
-    const container = document.getElementById('boardsList');
-    container.innerHTML = '';
-
-    if (allBoards.length === 0) {
-        container.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">Nenhum quadro encontrado. Crie o seu primeiro abaixo!</p>';
-    } else {
-        allBoards.forEach(board => {
-            const div = document.createElement('div');
-            div.className = "flex justify-between items-center p-4 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition cursor-pointer";
-            div.innerHTML = `<span class="font-semibold text-slate-800">${board.title}</span> <span class="text-blue-600 text-sm font-medium">Abrir →</span>`;
-            div.onclick = () => abrirQuadro(board.id, board.title);
-            container.appendChild(div);
-        });
-    }
-
-    // Controla limite de 3 quadros próprios
-    if (ownedBoards.length >= 3) {
-        document.getElementById('newBoardContainer').classList.add('hidden');
-    } else {
-        document.getElementById('newBoardContainer').classList.remove('hidden');
-    }
-}
-
-async function criarQuadro() {
-    const titleInput = document.getElementById('newBoardTitle');
-    const title = titleInput.value.trim();
-    if (!title) return;
-
-    if (!currentUser) {
-        alert('Usuário não autenticado. Faça login novamente.');
-        return;
-    }
-
-    // Verifica quantos quadros próprios o usuário já possui
-    const { count, error: countError } = await supabaseClient
-        .from('boards')
-        .select('*', { count: 'exact', head: true })
-        .eq('owner_id', currentUser.id);
-
-    if (countError) {
-        console.error('Erro ao contar quadros:', countError);
-    }
-
-    if (count >= 3) {
-        alert('Você atingiu o limite máximo de 3 quadros para este plano MVP.');
-        return;
-    }
-
-    // Insere explicitamente passando o owner_id do usuário logado
-    const { error } = await supabaseClient
-        .from('boards')
-        .insert([{ title: title, owner_id: currentUser.id }]);
-
-    if (error) {
-        alert('Erro ao criar quadro: ' + error.message);
-        return;
-    }
-
-    titleInput.value = '';
-    
-    // Atualiza a tela imediatamente após criar
-    await carregarQuadros();
-}
-
+        // --- TELA 4: KANBAN ---
         function abrirQuadro(id, title) {
             currentBoardId = id;
             currentBoardName = title;
             document.getElementById('currentBoardTitle').innerText = `🏡 ${title}`;
-            document.getElementById('boardScreen').classList.add('hidden');
-            document.getElementById('kanbanApp').classList.remove('hidden');
+            mostrarTela('screenKanban');
             carregarTarefas();
         }
 
-        function voltarParaQuadros() {
+        function voltarParaBoards() {
             carregarQuadros();
         }
 
-        // --- Tarefas e Kanban ---
         async function carregarTarefas() {
             const { data, error } = await supabaseClient.from('tasks').select('*').eq('board_id', currentBoardId);
             if (error) return console.error(error);
             tasks = data || [];
-            render();
+            renderKanban();
         }
 
-        function render() {
+        function renderKanban() {
             ['todo', 'doing', 'done'].forEach(status => {
                 const container = document.getElementById(`list-${status}`);
                 const countBadge = document.getElementById(`count-${status}`);
@@ -403,7 +431,7 @@ async function criarQuadro() {
             document.getElementById('taskModal').classList.remove('hidden');
         }
 
-        function fecharModal() { document.getElementById('taskModal').classList.add('hidden'); }
+        function fecharModalTarefa() { document.getElementById('taskModal').classList.add('hidden'); }
         function toggleBlockOptions() {
             const isChecked = document.getElementById('taskBlockedCheckbox').checked;
             document.getElementById('blockOptionsContainer').classList.toggle('hidden', !isChecked);
@@ -424,7 +452,7 @@ async function criarQuadro() {
                 await supabaseClient.from('tasks').insert([{ board_id: currentBoardId, title, status: 'todo', is_blocked, block_reason }]);
             }
 
-            fecharModal();
+            fecharModalTarefa();
             carregarTarefas();
         }
 
@@ -432,12 +460,12 @@ async function criarQuadro() {
             const id = document.getElementById('taskId').value;
             if (id) {
                 await supabaseClient.from('tasks').delete().eq('id', id);
-                fecharModal();
+                fecharModalTarefa();
                 carregarTarefas();
             }
         }
 
-        // --- Compartilhamento ---
+        // --- COMPARTILHAMENTO ---
         function abrirModalCompartilhar() { document.getElementById('shareModal').classList.remove('hidden'); }
         function fecharModalCompartilhar() { document.getElementById('shareModal').classList.add('hidden'); }
 
@@ -445,7 +473,7 @@ async function criarQuadro() {
             const email = document.getElementById('shareEmailInput').value.trim();
             if (!email) return;
 
-            // Busca o ID do usuário pelo email na tabela auth ou users (assumindo tabela pública de mapeamento ou busca direta)
+            // Busca o usuário pelo e-mail
             const { data: userData, error: userError } = await supabaseClient.from('users').select('id').eq('email', email).single();
             if (userError || !userData) return alert('Usuário não encontrado na plataforma.');
 
@@ -457,8 +485,18 @@ async function criarQuadro() {
             fecharModalCompartilhar();
         }
 
-        // Inicialização
-        verificarSessao();
+        // Checar sessão ativa ao iniciar
+        async function verificarSessaoInicial() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                carregarQuadros();
+            } else {
+                mostrarTela('screenLogin');
+            }
+        }
+
+        verificarSessaoInicial();
     </script>
 </body>
 </html>
